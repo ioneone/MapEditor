@@ -3,7 +3,6 @@ from pygame.locals import *
 import os
 import struct
 import sys
-import codecs
 
 TILE_SIZE = 32
 ROW = 20
@@ -16,6 +15,7 @@ background_img = 'water.png'
 map_chip_list = []
 
 GREEN = (0, 255, 0)
+WHITE = (255, 255, 255)
 
 """ How to use
 
@@ -29,6 +29,8 @@ Press 'R' to move the cursor to (0, 0)
 Left-click to place the selected tile
 
 """
+
+
 
 
 def main():
@@ -71,7 +73,7 @@ def main():
             selectx = (px + offset[0]) / TILE_SIZE
             selecty = (py + offset[1]) / TILE_SIZE
             message_engine.draw_string(screen, (10, 56), map.name)
-            message_engine.draw_string(screen, (10, 86), "%d　%d" % (selectx, selecty))
+            message_engine.draw_string(screen, (10, 86), "%d %d" % (selectx, selecty))
         pygame.display.update()
         """ input """
         for event in pygame.event.get():
@@ -205,7 +207,7 @@ class Map:
         for r in range(self.row):
             for c in range(self.col):
                 map_chip_id = self.map[r][c]
-                image_name = map_chip_list[map_chip_id+1]
+                image_name = map_chip_list[map_chip_id]
                 try:
                     new_images.index(image_name)
                 except ValueError:
@@ -213,6 +215,7 @@ class Map:
                 self.map[r][c] = new_images.index(image_name)
 
         self.default = new_images.index(background_img)
+
 
         """ save the map chip data """
         new_map_chip_file_name = name.lower()+".dat"
@@ -230,7 +233,7 @@ class Map:
         fp.write(struct.pack("i", self.col))
         # "B" unsigned char
         fp.write(struct.pack("B", self.default))
-        for r in range(row):
+        for r in range(self.row):
             for c in range(self.col):
                 fp.write(struct.pack("B", self.map[r][c]))
         fp.close()
@@ -332,6 +335,7 @@ def load_resized_map_chips(file_path):
         data = line.split(",")
         id = int(data[0])
         name = data[1]
+        map_chip_list.append(name+'.png')
         Map.images.append(load_image("mapchip", "%s.png" % name))
         if name == 'none':
             try:
@@ -356,59 +360,34 @@ def load_map_chips(directory):
     map_chip_list.clear()
 
     image_list = os.listdir(directory)
+    del image_list[0]  # remove '.DS_Store' from the list
     global map_chip_list
     map_chip_list = image_list
-    print(image_list)
-    for i in range(1, len(image_list)):
+    for i in range(0, len(image_list)):
         if image_list[i] == 'none.png':
-            Map.out_of_range_chip = i-1
+            Map.out_of_range_chip = i
         elif image_list[i] == background_img:
-            Map.default = i-1
+            Map.default = i
         Map.images.append(load_image(directory, image_list[i]))
 
 
 class MessageEngine:
-    
-    FONT_WIDTH = 16
-    FONT_HEIGHT = 22
-    WHITE, RED, GREEN, BLUE = 0, 160, 320, 480
+    # Author: Junhong Wang
+    # Date: 2016/11/03
+    # Description: message engine using .ttf file
 
     def __init__(self):
-        self.image = load_image("data", "font.png")
-        self.color = self.WHITE
-        self.kana2rect = {}
-        self.create_hash()
+        self.font = pygame.font.Font('data/lilliput_steps.ttf', 22)
+        self.font_width = self.font.size(' ')[0]
+        self.font_height = self.font.size(' ')[1]
+        self.color = WHITE
 
     def set_color(self, color):
-
         self.color = color
-        if not self.color in [self.WHITE, self.RED, self.GREEN, self.BLUE]:
-            self.color = self.WHITE
-
-    def draw_character(self, screen, pos, ch):
-        x, y = pos
-        try:
-            rect = self.kana2rect[ch]
-            screen.blit(self.image, (x, y), (rect.x+self.color, rect.y, rect.width, rect.height))
-        except KeyError:
-            print("描画できない文字があります:%s" % ch)
-            return
 
     def draw_string(self, screen, pos, str):
-        x, y = pos
-        for i, ch in enumerate(str):
-            dx = x + self.FONT_WIDTH * i
-            self.draw_character(screen, (dx, y), ch)
-
-    def create_hash(self):
-        filepath = os.path.join("data", "kana2rect.dat")
-        fp = codecs.open(filepath, "r", "utf-8")
-        for line in fp.readlines():
-            line = line.rstrip()
-            d = line.split(" ")
-            kana, x, y, w, h = d[0], int(d[1]), int(d[2]), int(d[3]), int(d[4])
-            self.kana2rect[kana] = Rect(x, y, w, h)
-        fp.close()
+        surface = self.font.render(str, True, self.color)
+        screen.blit(surface, pos)
 
 
 class Window:
@@ -421,7 +400,6 @@ class Window:
         self.is_visible = False
 
     def draw(self, screen):
-        """ウィンドウを描画"""
         if not self.is_visible:
             return
         pygame.draw.rect(screen, (255, 255, 255), self.rect, 0)
@@ -467,7 +445,7 @@ class InputWindow(Window):
                 break
             elif K_0 <= key <= K_9 or K_a <= key <= K_z:
                 cur_str.append(chr(key).upper())
-            self.draw(screen, question + u"　" + "".join(cur_str))
+            self.draw(screen, question + u" " + "".join(cur_str))
         return "".join(cur_str)
 
 if __name__ == "__main__":
