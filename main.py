@@ -38,8 +38,9 @@ def main():
     
     # Load map chip
     # load_mapchips("data", "mapchip.dat")
-    load_map_chips("mapchip")
-    
+    # load_map_chips("mapchip")
+    load_map_chips("img")
+
     palette = MapchipPalette()
     map = Map("NEW", 64, 64, palette)
     cursor = Cursor(0, 0)
@@ -47,13 +48,24 @@ def main():
     input_window = InputWindow(INPUT_RECT, message_engine)
     
     clock = pygame.time.Clock()
+    page = 1
+    imagePerPage = 500
 
     while True:
-        clock.tick(60)
+        clock.tick(30)
         if palette.display_flag:
+            for event in pygame.event.get():
+                if event.type == KEYDOWN:
+                    if event.key == K_LEFT:
+                        if page > 1:
+                            page -= 1
+                    elif event.key == K_RIGHT:
+                        if (len(Map.images) > page * imagePerPage):
+                            page += 1
+
             # draw palette
-            palette.update()
-            palette.draw(screen)
+            palette.update(page, imagePerPage)
+            palette.draw(screen, page, imagePerPage)
         else:
             # draw map
             offset = calc_offset(cursor)
@@ -230,7 +242,7 @@ class Map:
         fp.write(struct.pack("i", self.col))
         # "B" unsigned char
         fp.write(struct.pack("B", self.default))
-        for r in range(row):
+        for r in range(self.row):
             for c in range(self.col):
                 fp.write(struct.pack("B", self.map[r][c]))
         fp.close()
@@ -271,7 +283,7 @@ class MapchipPalette:
         self.display_flag = False
         self.selected_mapchip = 0
 
-    def update(self):
+    def update(self, page, imagePerPage = 500):
         mouse_pressed = pygame.mouse.get_pressed()
         if mouse_pressed[0]:  # left-click
             mouse_pos = pygame.mouse.get_pos()
@@ -280,20 +292,23 @@ class MapchipPalette:
             y = int(mouse_pos[1] / TILE_SIZE)
             # convert palette position to map chip id
             n = y * COLUMN + x
-            if n < len(Map.images) and Map.images[n]:
-                self.selected_mapchip = n
+            if n + ((page - 1) * imagePerPage) < len(Map.images) and Map.images[n]:
+                self.selected_mapchip = n + ((page -1) * imagePerPage)
                 self.display_flag = False
                 # prevent the clicking to be effective right after the palette disappear
                 pygame.time.wait(500)
 
-    def draw(self, screen):
+    def draw(self, screen, page, imagePerPage = 500):
         for i in range(ROW * COLUMN):
             x = int(i % COLUMN) * TILE_SIZE
             y = int(i / COLUMN) * TILE_SIZE
             image = Map.images[Map.out_of_range_chip]
+
             try:
-                if Map.images[i]:
-                    image = Map.images[i]
+                if i + ((page - 1) * imagePerPage) > page * imagePerPage or i + ((page - 1) * imagePerPage) < page * imagePerPage - imagePerPage:
+                    image = Map.images[Map.out_of_range_chip]
+                elif Map.images[i + ((page - 1) * imagePerPage)]:
+                    image = Map.images[i + ((page - 1) * imagePerPage)]
             except IndexError:
                 image = Map.images[Map.out_of_range_chip]
 
