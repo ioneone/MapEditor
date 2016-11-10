@@ -16,6 +16,7 @@ background_img = 'water.png'
 map_chip_list = []
 
 GREEN = (0, 255, 0)
+RED = (255, 0, 0)
 
 """ How to use
 
@@ -54,15 +55,6 @@ def main():
     while True:
         clock.tick(30)
         if palette.display_flag:
-            for event in pygame.event.get():
-                if event.type == KEYDOWN:
-                    if event.key == K_LEFT:
-                        if page > 1:
-                            page -= 1
-                    elif event.key == K_RIGHT:
-                        if (len(Map.images) > page * imagePerPage):
-                            page += 1
-
             # draw palette
             palette.update(page, imagePerPage)
             palette.draw(screen, page, imagePerPage)
@@ -121,7 +113,14 @@ def main():
                         continue
                 elif event.key == K_r:
                     cursor.x, cursor.y = 0, 0
-
+            if palette.display_flag:
+                if event.type == KEYDOWN:
+                    if event.key == K_LEFT:
+                        if page > 1:
+                            page -= 1
+                    elif event.key == K_RIGHT:
+                        if (len(Map.images) > page * imagePerPage):
+                            page += 1
 
 class Cursor:
     COLOR = GREEN
